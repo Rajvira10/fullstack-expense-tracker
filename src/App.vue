@@ -1,47 +1,68 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
-</script>
-
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+  <Header />
+  <div class="container">
+    <Balance :total="total" />
+    <IncomeExpense :income="income" :expense="expense" />
+    <TransactionList
+      :transactions="transactions"
+      @deleteTransaction="handleTransactionDelete"
+    />
+    <AddTransaction @addTransaction="handleTransaction" />
+  </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
-}
+<script setup>
+import Header from "./components/Header.vue";
+import Balance from "./components/Balance.vue";
+import IncomeExpense from "./components/IncomeExpense.vue";
+import TransactionList from "./components/TransactionList.vue";
+import AddTransaction from "./components/AddTransaction.vue";
+import { useToast } from "vue-toastification";
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
+import { ref, computed, onMounted } from "vue";
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+const toast = useToast();
+
+const transactions = ref([]);
+
+onMounted(() => {
+  const savedTransactions = JSON.parse(localStorage.getItem("transactions"));
+  if (savedTransactions) {
+    transactions.value = savedTransactions;
   }
+});
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
+const total = computed(() => {
+  return transactions.value.reduce((acc, item) => (acc += item.amount), 0);
+});
 
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-}
-</style>
+const income = computed(() => {
+  return transactions.value
+    .filter((item) => item.amount > 0)
+    .reduce((acc, item) => (acc += item.amount), 0);
+});
+
+const expense = computed(() => {
+  return transactions.value
+    .filter((item) => item.amount < 0)
+    .reduce((acc, item) => (acc += -item.amount), 0);
+});
+
+const handleTransaction = (transaction) => {
+  transactions.value = [transaction, ...transactions.value];
+  saveTransactionsToLocalStorage();
+  toast.success("Transaction Added Successfully");
+};
+
+const handleTransactionDelete = (id) => {
+  transactions.value = transactions.value.filter(
+    (transaction) => transaction.id !== id
+  );
+  saveTransactionsToLocalStorage();
+  toast.success("Transaction Deleted Successfully");
+};
+
+const saveTransactionsToLocalStorage = () => {
+  localStorage.setItem("transactions", JSON.stringify(transactions.value));
+};
+</script>
